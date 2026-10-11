@@ -1,0 +1,464 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Pick something you did online today and see its oldest known ancestor, the scholar's name for it, and where it falls in the cosmic year.">
+<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Old Light</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gloock&family=Martian+Mono:wght@400;500&family=Schibsted+Grotesk:wght@400;500;700&display=swap">
+<style>
+/* Layout: a field notebook on the left, a single log-scale core sample on the right.
+   Surface is today, the bottom of the core is the Big Bang. */
+:root {
+  --ground: #E9E8EE;
+  --panel: #F4F3F8;
+  --ink: #1B1A3A;
+  --muted: #5A5878;
+  --line: #C4C2D2;
+  --screen: #3D3BE0;
+  --ochre: #8A520A;
+  --void: #1B1A3A;
+  --on-screen: #FFFFFF;
+  --display: "Gloock", "Iowan Old Style", Georgia, serif;
+  --body: "Schibsted Grotesk", "Helvetica Neue", Arial, sans-serif;
+  --mono: "Martian Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #12112A; --panel: #1B1A3C; --ink: #E8E6F5; --muted: #9C9ABC; --line: #34325A;
+    --screen: #9B99FF; --ochre: #E0A640; --void: #05041A; --on-screen: #12112A;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --ground: #12112A; --panel: #1B1A3C; --ink: #E8E6F5; --muted: #9C9ABC; --line: #34325A;
+  --screen: #9B99FF; --ochre: #E0A640; --void: #05041A; --on-screen: #12112A;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: 17px;
+  line-height: 1.55;
+}
+.wrap {
+  max-width: 1080px;
+  margin-inline: auto;
+  padding-inline: 20px;
+  padding-block: 40px 56px;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+.label {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* opener */
+.opener { display: flex; flex-direction: column; gap: 14px; max-width: 40rem; }
+h1 {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: clamp(3.2rem, 11vw, 6rem);
+  line-height: 0.95;
+  margin: 0;
+  text-wrap: balance;
+}
+.opener p { margin: 0; max-width: 34rem; }
+.opener .thesis { font-size: 1.25rem; line-height: 1.4; }
+
+/* main split */
+.split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 48px;
+  align-items: start;
+}
+.notebook { display: flex; flex-direction: column; gap: 28px; min-width: 0; }
+
+.picker { display: flex; flex-direction: column; gap: 12px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 7px 14px;
+  cursor: pointer;
+}
+.chip:hover { border-color: var(--ink); }
+.chip[aria-pressed="true"] {
+  background: var(--screen);
+  border-color: var(--screen);
+  color: var(--on-screen);
+}
+.chip:focus-visible { outline: 2px solid var(--ochre); outline-offset: 2px; }
+
+/* reading: four rows, each a layer */
+.layers { display: flex; flex-direction: column; border-top: 1px solid var(--line); }
+.layer {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr);
+  gap: 20px;
+  padding-block: 22px;
+  border-bottom: 1px solid var(--line);
+}
+.layer .label { padding-top: 5px; display: flex; flex-direction: column; gap: 4px; }
+.layer .label b { font-weight: 500; color: var(--ink); }
+.layer-body { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.layer-body p { margin: 0; max-width: 36rem; }
+.layer h2 {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 1.7rem;
+  line-height: 1.15;
+  margin: 0;
+  text-wrap: balance;
+}
+.today-line { font-size: 1.2rem; line-height: 1.4; }
+.place, .by { font-family: var(--mono); font-size: 12px; color: var(--ochre); }
+.layer.sky { border-bottom: 0; }
+.stamp {
+  font-family: var(--mono);
+  font-weight: 500;
+  font-size: clamp(2rem, 8.5vw, 3.6rem);
+  line-height: 1.05;
+  color: var(--screen);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.stamp small { display: block; font-size: 12px; letter-spacing: 0.08em; color: var(--muted); font-weight: 400; margin-bottom: 6px; }
+
+/* the core sample */
+.core-col { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 20px); display: flex; flex-direction: column; gap: 14px; }
+.core-col p { margin: 0; font-size: 14px; color: var(--muted); line-height: 1.45; }
+.core { position: relative; height: 720px; margin-block: 16px; }
+.bar {
+  position: absolute; top: 0; bottom: 0; left: 50%;
+  width: 22px; margin-left: -11px;
+  border-radius: 3px;
+  border: 1px solid var(--line);
+  background: linear-gradient(to bottom, var(--screen) 0%, var(--ochre) 38%, var(--void) 78%);
+}
+.lm, .pin, .tick { position: absolute; transform: translateY(-50%); }
+.lm {
+  right: calc(50% + 11px);
+  padding-right: 16px;
+  text-align: right;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  line-height: 1.35;
+  color: var(--muted);
+}
+.lm b { display: block; font-weight: 500; color: var(--ink); }
+.lm::after {
+  content: ""; position: absolute; right: 0; top: 50%;
+  width: 10px; border-top: 1px solid var(--muted);
+}
+.tick {
+  left: calc(50% + 11px);
+  width: 10px; border-top: 2px solid var(--muted);
+  transition: width 0.25s ease, border-color 0.25s ease;
+}
+.tick.on { width: 22px; border-color: var(--screen); }
+.pin {
+  left: calc(50% + 39px);
+  right: 0;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  line-height: 1.35;
+  color: var(--screen);
+  transition: top 0.35s ease;
+}
+.pin b { display: block; font-weight: 500; }
+.ends { display: flex; justify-content: center; }
+@media (prefers-reduced-motion: reduce) { .tick, .pin { transition: none; } }
+
+/* footer */
+.method { border-top: 1px solid var(--line); padding-top: 24px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; }
+.method p { margin: 0 0 10px; font-size: 15px; max-width: 34rem; }
+.method ul { margin: 0; padding-left: 18px; font-size: 13.5px; color: var(--muted); line-height: 1.5; }
+.method h3 { font-family: var(--mono); font-size: 11px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; margin: 0 0 10px; }
+
+@media (max-width: 820px) {
+  .split { grid-template-columns: minmax(0, 1fr); gap: 36px; }
+  .core-col { position: static; }
+  .core { height: 600px; max-width: 340px; width: 100%; margin-inline: auto; }
+  .layer { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .layer .label { flex-direction: row; gap: 10px; padding-top: 0; }
+  .method { grid-template-columns: minmax(0, 1fr); }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="opener">
+    <span class="label">An experiment in online culture, anthropology and deep time</span>
+    <h1>Old Light</h1>
+    <p class="thesis">Look up at a star and you see light that left it long ago. Dig into the ground and you find the past again. This page does both to your phone habits.</p>
+    <p>Pick something you did online today. You get the oldest version of it we have evidence for, the name a scholar gave the behaviour, and where it lands if the whole history of the universe is squeezed into one year.</p>
+  </header>
+
+  <div class="split">
+    <main class="notebook">
+      <section class="picker" aria-labelledby="pick-label">
+        <span class="label" id="pick-label">Today you</span>
+        <div class="chips" id="chips"></div>
+      </section>
+
+      <section class="layers" aria-live="polite">
+        <div class="layer">
+          <div class="label"><b>Surface</b><span>today</span></div>
+          <div class="layer-body"><p class="today-line" id="today"></p></div>
+        </div>
+        <div class="layer">
+          <div class="label"><b>Dig</b><span id="age-label"></span></div>
+          <div class="layer-body">
+            <h2 id="ancestor"></h2>
+            <span class="place" id="place"></span>
+            <p id="ancestor-text"></p>
+          </div>
+        </div>
+        <div class="layer">
+          <div class="label"><b>Field note</b><span>the name for it</span></div>
+          <div class="layer-body">
+            <h2 id="concept"></h2>
+            <span class="by" id="by"></span>
+            <p id="concept-text"></p>
+          </div>
+        </div>
+        <div class="layer sky">
+          <div class="label"><b>Sky</b><span>the cosmic year</span></div>
+          <div class="layer-body">
+            <div class="stamp"><small>31 DECEMBER</small><span id="stamp"></span></div>
+            <p id="cosmic-text"></p>
+            <p id="light-text"></p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <aside class="core-col" aria-label="Timeline from today to the Big Bang">
+      <span class="label">Core sample, years before today</span>
+      <p>Each equal step down the column is ten times older than the last. Without that squeeze, everything humans have done would be a line too thin to draw.</p>
+      <div class="ends"><span class="label">Today</span></div>
+      <div class="core" id="core"><div class="bar"></div></div>
+      <div class="ends"><span class="label">Big Bang</span></div>
+      <p id="fit"></p>
+    </aside>
+  </div>
+
+  <footer class="method">
+    <div>
+      <h3>How to read this</h3>
+      <p>The dates, places and scholars are from the published record. The pairing of each one with a phone habit is the experiment. Nobody can show that a hand stencil and a selfie come from the same impulse. They are placed side by side so you can decide.</p>
+      <p>The cosmic year is Carl Sagan's calendar, updated to today's figure for the age of the universe. Sagan used 15 billion years. Here 13.8 billion years are mapped onto 365 days, so one second stands for about 438 years.</p>
+    </div>
+    <div>
+      <h3>Sources</h3>
+      <ul>
+        <li>Dating of the Liang Metanduno hand stencil, <i>Nature</i>, January 2026</li>
+        <li>Kind et al., The Smile of the Lion Man, <i>Quartär</i>, 2014</li>
+        <li>Shahack-Gross et al., central hearth at Qesem Cave, <i>Journal of Archaeological Science</i>, 2014</li>
+        <li>Wiessner, Embers of society, <i>PNAS</i>, 2014</li>
+        <li>Dietrich et al., cult and feasting at Göbekli Tepe, <i>Antiquity</i>, 2012</li>
+        <li>Keightley, <i>Sources of Shang History</i>, 1978</li>
+        <li>Malinowski, <i>Argonauts of the Western Pacific</i>, 1922, and Magic, Science and Religion, 1925</li>
+        <li>Mauss, <i>The Gift</i>, 1925. Veblen, <i>The Theory of the Leisure Class</i>, 1899</li>
+        <li>Durkheim, <i>The Elementary Forms of Religious Life</i>, 1912</li>
+        <li>Goffman, <i>The Presentation of Self in Everyday Life</i>, 1956</li>
+        <li>Dawkins, <i>The Selfish Gene</i>, 1976. Dunbar, <i>Grooming, Gossip and the Evolution of Language</i>, 1996</li>
+        <li>Boehm, Egalitarian Behavior and Reverse Dominance Hierarchy, <i>Current Anthropology</i>, 1993. Sagan, <i>The Dragons of Eden</i>, 1977</li>
+      </ul>
+    </div>
+  </footer>
+</div>
+
+<script>
+(function () {
+  var UNIVERSE = 13.8e9;        // years
+  var YEAR_SECONDS = 31536000;  // 365 days
+  var MILKY_WAY = 87400;        // light-years across the disc (D25 diameter)
+  var ANDROMEDA = 2500000;      // light-years away
+
+  function since(year) { return new Date().getFullYear() - year; }
+
+  var ENTRIES = [
+    { id: "selfie", chip: "Posted a selfie",
+      today: "You held the camera at arm's length and told the feed you were here.",
+      age: 67800, ageLabel: "at least 67,800 years ago",
+      ancestor: "The hand stencil at Liang Metanduno", place: "Muna Island, Sulawesi, Indonesia",
+      text: "Someone pressed a hand to the cave wall and blew red pigment around it. Dating of the mineral crust that grew on top gives a minimum age of 67,800 years, which makes it the oldest dated cave art known. Nobody knows what the makers meant by it. The outline of one particular person's hand is still there.",
+      concept: "The presentation of self", by: "Erving Goffman, 1956",
+      note: "Goffman described social life as a performance staged for an audience. The stage keeps changing. The urge to leave a mark of yourself is tens of thousands of years older than writing." },
+    { id: "avatar", chip: "Made an avatar",
+      today: "You picked a face that isn't your face: a cartoon, an animal, a character with better hair.",
+      age: 40000, ageLabel: "about 40,000 years ago",
+      ancestor: "The Lion Man of Hohlenstein-Stadel", place: "Swabian Jura, Germany",
+      text: "A figure 31 cm tall, carved from mammoth ivory, with a human body and the head of a cave lion. It is among the oldest known images of something that does not exist. A replication experiment put the carving time at somewhere between 320 and 400 hours with stone tools.",
+      concept: "Therianthrope", by: "Archaeologists' term for a part-human, part-animal figure",
+      note: "People were building alternate selves long before there was anywhere to upload them." },
+    { id: "groupchat", chip: "Gossiped in the group chat",
+      today: "You typed “ok but did you see what she posted” to six people at 11 pm.",
+      age: 300000, ageLabel: "about 300,000 years ago",
+      ancestor: "The hearth at Qesem Cave", place: "Israel",
+      text: "A fire lit again and again in the same spot, with ash layers and burnt bone around it. A fixed fire gives people a reason to sit together after dark. Polly Wiessner's study of Ju/'hoansi conversations found that daytime talk was mostly practical matters and complaints, and about four fifths of firelit talk was stories.",
+      concept: "Grooming and gossip", by: "Robin Dunbar, 1996",
+      note: "Dunbar argued that language took over the job grooming does in other primates: keeping track of who is allied with whom. He put the size of a stable human social circle at about 150." },
+    { id: "like", chip: "Sent a like",
+      today: "You tapped a heart on a friend's post. They will tap one on yours. Both of you know the score.",
+      age: since(1922), ageLabel: "described in 1922",
+      ancestor: "The Kula ring", place: "Trobriand Islands, Papua New Guinea",
+      text: "Red shell necklaces travel clockwise around a ring of islands and white shell armbands travel the other way. The objects have little practical use and nobody keeps them for long. Their purpose is the relationship each handoff creates. The exchange is far older than the book that made it famous.",
+      concept: "The gift", by: "Bronisław Malinowski, 1922, and Marcel Mauss, 1925",
+      note: "Mauss's point was that no gift is free. Every gift carries three obligations: to give, to receive, and to give back." },
+    { id: "giveaway", chip: "Watched a giveaway",
+      today: "You watched a stranger hand out cars, or unbox forty things they will never use.",
+      age: since(1885), ageLabel: "banned by Canada in 1885",
+      ancestor: "The potlatch", place: "Pacific Northwest coast, North America",
+      text: "At a potlatch a host gives away wealth in front of witnesses, and rank is confirmed by how much is given. Kwakwaka'wakw and neighbouring peoples have held them for many generations and still do. Canada outlawed the ceremony from 1885 to 1951.",
+      concept: "Conspicuous consumption", by: "Thorstein Veblen, 1899",
+      note: "Veblen coined the phrase for spending whose main purpose is to be seen. The potlatch is a much richer institution than that, with law, kinship and history in it. The part that shows up on camera is status earned by giving in public." },
+    { id: "doomscroll", chip: "Doomscrolled",
+      today: "You refreshed the feed again in case the next post told you how things will turn out.",
+      age: 3250, ageLabel: "about 3,250 years ago",
+      ancestor: "Shang oracle bones", place: "Anyang, China",
+      text: "Diviners for the Shang kings put questions to ox shoulder blades and turtle shells, applied heat, read the cracks, and carved the question into the bone. Will it rain. Will the harvest fail. Will the king's toothache pass. These inscriptions are the earliest large body of Chinese writing.",
+      concept: "Magic and uncertainty", by: "Bronisław Malinowski, 1925",
+      note: "Malinowski noticed that Trobriand fishermen used no magic in the safe lagoon and a great deal of it on the open sea. Ritual gathers where the outcome is out of your hands." },
+    { id: "pileon", chip: "Joined a pile-on",
+      today: "You added one more reply to the ten thousand already under the post.",
+      age: since(-486), ageLabel: "first used in 487 BCE",
+      ancestor: "Ostracism in Athens", place: "Greece",
+      text: "Athenian citizens could vote to send one person into exile for ten years. Each voter scratched a name on a broken piece of pottery, an ostrakon. No charge or trial was needed. Thousands of these sherds survive with the names still legible.",
+      concept: "Reverse dominance hierarchy", by: "Christopher Boehm, 1993",
+      note: "Boehm found that small egalitarian societies keep would-be bosses in check with ridicule, criticism and, in the end, ostracism. The many combine against the one who rises too far. That tool was built for a band of a few dozen people. Online it runs at the scale of millions." },
+    { id: "meme", chip: "Shared a meme",
+      today: "You sent the same joke format you have seen forty times, with one word changed.",
+      age: since(79), ageLabel: "sealed by Vesuvius in 79 CE",
+      ancestor: "Graffiti at Pompeii", place: "Italy",
+      text: "The walls of Pompeii carry thousands of scratched messages: insults, boasts, love notes, drawings. One couplet turns up in several places around town. Roughly: wall, I am amazed you have not collapsed under the weight of so many writers' rubbish.",
+      concept: "Meme", by: "Richard Dawkins, 1976",
+      note: "Dawkins coined the word for an idea that spreads by being copied, with small changes along the way. He had tunes and catchphrases in mind. The internet took the word and proved the point." },
+    { id: "livestream", chip: "Joined a livestream",
+      today: "You and 80,000 strangers watched the same thing at the same moment and typed the same emoji.",
+      age: 11500, ageLabel: "about 11,500 years ago",
+      ancestor: "Göbekli Tepe", place: "Southeastern Turkey",
+      text: "Rings of T-shaped limestone pillars up to 5.5 metres tall, carved with foxes, boars and vultures. They were raised by people who had not yet started farming. Excavators found huge quantities of animal bone and stone vessels, which point to feasting on a scale that needed a crowd.",
+      concept: "Collective effervescence", by: "Émile Durkheim, 1912",
+      note: "Durkheim's term for the charge that runs through people when they gather and do the same thing at once. He thought it was where the sense of the sacred comes from." },
+    { id: "void", chip: "Posted and got no reply",
+      today: "You wrote something you meant, pressed post, and heard nothing back.",
+      age: Math.floor((Date.now() - Date.UTC(1974, 10, 16)) / 31557600000), ageLabel: "sent 16 November 1974",
+      ancestor: "The Arecibo message", place: "Arecibo, Puerto Rico",
+      text: "A radio telescope beamed 1,679 bits toward the star cluster M13: a pixel picture of a human figure, a DNA helix and our solar system. The cluster is somewhere between 22,000 and 25,000 light-years away. The message has covered about a fifth of one percent of the trip.",
+      concept: "Messaging the unknown", by: "Frank Drake and colleagues, 1974",
+      note: "The broadcast was more a demonstration than a serious attempt at contact. It is still the same act as any post: a signal shaped by guessing at whoever might be on the other end." }
+  ];
+
+  var LANDMARKS = [
+    { name: "Big Bang", age: 13.8e9, label: "13.8 billion" },
+    { name: "Earth forms", age: 4.5e9, label: "4.5 billion" },
+    { name: "Dinosaurs end", age: 66e6, label: "66 million" },
+    { name: "First stone tools", age: 3.3e6, label: "3.3 million" },
+    { name: "Homo sapiens", age: 300000, label: "300,000" },
+    { name: "Writing", age: 5300, label: "5,300" },
+    { name: "Printing press", age: 580, label: "580" },
+    { name: "The web", age: since(1989), label: String(since(1989)) }
+  ];
+
+  var LOG_MIN = 1, LOG_MAX = Math.log10(UNIVERSE);
+  function pos(age) { return (Math.log10(age) - LOG_MIN) / (LOG_MAX - LOG_MIN) * 100; }
+  function $(id) { return document.getElementById(id); }
+  function num(n) { return Math.round(n).toLocaleString("en-US"); }
+  function pct(x) { return x >= 10 ? Math.round(x) + "%" : x >= 1 ? x.toFixed(1) + "%" : x.toPrecision(2) + "%"; }
+  function pad(n) { return n < 10 ? "0" + n : "" + n; }
+
+  function secondsBeforeMidnight(age) { return age / UNIVERSE * YEAR_SECONDS; }
+  function stamp(age) {
+    var s = secondsBeforeMidnight(age), rem = 86400 - s;
+    var h = Math.floor(rem / 3600), m = Math.floor((rem % 3600) / 60), sec = rem - h * 3600 - m * 60;
+    var secText = s < 10 ? (sec < 10 ? "0" : "") + sec.toFixed(2) : pad(Math.floor(sec));
+    return pad(h) + ":" + pad(m) + ":" + secText;
+  }
+  function gap(age) {
+    var s = secondsBeforeMidnight(age);
+    if (s < 1) return s.toFixed(2) + " seconds";
+    if (s < 60) return s.toFixed(1) + " seconds";
+    return Math.floor(s / 60) + " minutes and " + Math.round(s % 60) + " seconds";
+  }
+  function lightLine(age) {
+    var head = "Light that left Earth at that moment has travelled " + num(age) + " light-years. ";
+    if (age < MILKY_WAY) return head + "That is " + pct(age / MILKY_WAY * 100) + " of the way across the disc of the Milky Way.";
+    return head + "That is " + (age / MILKY_WAY).toFixed(0) + " times the width of the Milky Way's disc and " + pct(age / ANDROMEDA * 100) + " of the distance to the Andromeda galaxy.";
+  }
+
+  var chips = $("chips"), core = $("core"), ticks = {}, buttons = {};
+
+  LANDMARKS.forEach(function (l) {
+    var d = document.createElement("div");
+    d.className = "lm"; d.style.top = pos(l.age) + "%";
+    var b = document.createElement("b"); b.textContent = l.name;
+    d.appendChild(b); d.appendChild(document.createTextNode(l.label));
+    core.appendChild(d);
+  });
+  ENTRIES.forEach(function (e) {
+    var t = document.createElement("div");
+    t.className = "tick"; t.style.top = pos(e.age) + "%";
+    core.appendChild(t); ticks[e.id] = t;
+
+    var btn = document.createElement("button");
+    btn.type = "button"; btn.className = "chip"; btn.id = "chip-" + e.id;
+    btn.textContent = e.chip; btn.setAttribute("aria-pressed", "false");
+    btn.addEventListener("click", function () { select(e.id, true); });
+    chips.appendChild(btn); buttons[e.id] = btn;
+  });
+  var pin = document.createElement("div");
+  pin.className = "pin";
+  var pinName = document.createElement("b"), pinAge = document.createElement("span");
+  pin.appendChild(pinName); pin.appendChild(pinAge); core.appendChild(pin);
+
+  var oldest = ENTRIES.reduce(function (a, b) { return a.age > b.age ? a : b; });
+  $("fit").textContent = "On the cosmic calendar, all " + ENTRIES.length + " ancestors on this page fit inside the last " + gap(oldest.age) + " of the year.";
+
+  function select(id, push) {
+    var e = ENTRIES.filter(function (x) { return x.id === id; })[0] || ENTRIES[0];
+    ENTRIES.forEach(function (x) {
+      buttons[x.id].setAttribute("aria-pressed", x.id === e.id ? "true" : "false");
+      ticks[x.id].classList.toggle("on", x.id === e.id);
+    });
+    $("today").textContent = e.today;
+    $("age-label").textContent = e.ageLabel;
+    $("ancestor").textContent = e.ancestor;
+    $("place").textContent = e.place;
+    $("ancestor-text").textContent = e.text;
+    $("concept").textContent = e.concept;
+    $("by").textContent = e.by;
+    $("concept-text").textContent = e.note;
+    $("stamp").textContent = stamp(e.age);
+    $("cosmic-text").textContent = "If the universe were one year old, this happens " + gap(e.age) + " before midnight on New Year's Eve.";
+    $("light-text").textContent = lightLine(e.age);
+    pin.style.top = pos(e.age) + "%";
+    pinName.textContent = e.ancestor;
+    pinAge.textContent = num(e.age) + " years";
+    if (push) { try { history.replaceState(null, "", "#" + e.id); } catch (err) {} }
+  }
+
+  var start = "";
+  try { start = (location.hash || "").replace("#", ""); } catch (err) {}
+  select(start || "selfie", false);
+})();
+</script>
+</body>
+</html>
